@@ -16,11 +16,11 @@ type Lines struct {
   max int
 }
 
-func NewLines(min int, max int) *Lines {
+func NewLines(max int) *Lines {
   l := new(Lines)
   l.lines = make([]string, 0)
   l.lines_focus = make([]string, 0)
-  l.min = min
+  l.min = 0
   l.max = max
   return l
 }
@@ -46,84 +46,80 @@ func (l *Lines) append(text string) {
 // Main
 func drawLine(text string, line_number int) {
   for pos, char := range text {
-      termbox.SetCell(pos, line_number, char, 'b', 'a')
+    termbox.SetCell(pos, line_number, char, 'b', 'a')
   }
   termbox.Flush()
 }
 
 func initial(linesObject *Lines, scanner *bufio.Scanner, term_height int, line_number int) (*Lines) {
-        for line_number < term_height && scanner.Scan() {
-            text := scanner.Text()
-            linesObject.append(text)
-            drawLine(text, line_number)
-						line_number++
-        }
-				return linesObject
-}
+  for line_number < term_height && scanner.Scan() {
+    text := scanner.Text()
+    linesObject.append(text)
+    drawLine(text, line_number)
+    line_number++
+  }
+  return linesObject}
 
 func handleScrollDown(lines *Lines, next_line string) {
-    //termbox.Flush()
-    termbox.Clear('b', 'a')
-    counter := 0
-    //current_lines := lines[1:line_number+1]
-    current_lines := lines.scrollDown()
-    for _, str := range current_lines {
-      drawLine(string(str), counter)
-      counter++
-    }
+  termbox.Clear('b', 'a')
+  counter := 0
+  current_lines := lines.scrollDown()
+  for _, str := range current_lines {
+    drawLine(string(str), counter)
+    counter++
+  }
 }
 
 func handleScrollUp(lines *Lines) {
-    termbox.Clear('b', 'a')
-    counter := 0
-    current_lines := lines.scrollUp()
-    for _, str := range current_lines {
-      drawLine(string(str), counter)
-      counter++
-    }
+  termbox.Clear('b', 'a')
+  counter := 0
+  current_lines := lines.scrollUp()
+  for _, str := range current_lines {
+    drawLine(string(str), counter)
+    counter++
+  }
 }
 
 func main() {
-    err := termbox.Init()
-    if err != nil {
-        panic(err)
-    }
+  err := termbox.Init()
+  if err != nil {
+      panic(err)
+  }
 
-    args := os.Args[1:]
-    filename := args[0]
-		_, term_height := termbox.Size()
-		//var lines []string
-    //lines := Lines{lines: make([]string, 0), min: 0, max: term_height}
-    lines := NewLines(0, term_height)
+  args := os.Args[1:]
+  filename := args[0]
+  _, term_height := termbox.Size()
+  lines := NewLines(term_height)
 
-    if file, err := os.Open(filename); err == nil {
-        scanner := bufio.NewScanner(file)
-				lines := initial(lines, scanner, term_height, 0)
+  if file, err := os.Open(filename); err == nil {
+      scanner := bufio.NewScanner(file)
+      lines := initial(lines, scanner, term_height, 0)
 
-				// main loop
-				listener:
-				for {
-						switch ev := termbox.PollEvent(); ev.Type {
-            case termbox.EventKey:
-                switch ev.Key {
-                    case termbox.KeyEsc:
-                        break listener
-                    case termbox.KeyArrowDown:
-                        scanner.Scan()
-                        next_line := scanner.Text()
-                        lines.append(next_line)
-                        handleScrollDown(lines, next_line)
-                    case termbox.KeyArrowUp:
-                        handleScrollUp(lines)
-                }
-            case termbox.EventResize:
-            }
-				}
-        defer file.Close()
-    } else {
-        log.Fatal(err)
-    }
+      // main loop
+      listener:
+      for {
+        switch ev := termbox.PollEvent(); ev.Type {
+        case termbox.EventKey:
+        switch ev.Key {
+            case termbox.KeyEsc:
+              break listener
+            case termbox.KeyArrowDown:
+              if scanner.Scan() {
+                next_line := scanner.Text()
+                lines.append(next_line)
+                handleScrollDown(lines, next_line)
+              }
+            case termbox.KeyArrowUp:
+              handleScrollUp(lines)
+        }
+        case termbox.EventResize:
+        }
+      }
+      defer file.Close()
+  } else {
+      log.Fatal(err)
+  }
 
-    defer termbox.Close()
+  defer termbox.Close()
 }
 
